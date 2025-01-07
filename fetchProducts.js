@@ -1,19 +1,20 @@
-import 'dotenv/config'
+import { PrismaClient } from '@prisma/client';
 import fetch from 'node-fetch';
-import sql from './db.js'
+import 'dotenv/config';
 
-//require('dotenv').config();
+const prisma = new PrismaClient();
+
 const { SHOPIFY_STORE_URL, SHOPIFY_ACCESS_TOKEN } = process.env;
-// const fetch = require('node-fetch');
-
 const graphqlEndpoint = `https://${SHOPIFY_STORE_URL}/admin/api/2025-01/graphql.json`;
 
 let cursor = null, hasNextPage = true;
-while(hasNextPage) {
+
+while (hasNextPage) {
     console.log("entered while loop")
+
     const query = `
-query {
-    products(first: 1, after: ${cursor ? `"${cursor}"`:null}) {
+  query {
+    products(first: 1, after: ${cursor ? `"${cursor}"` : null}) {
       edges {
         node {
           id
@@ -25,11 +26,10 @@ query {
       pageInfo {
         hasNextPage
         endCursor
-        startCursor
       }
     }
-  },
-`;
+  }`;
+
     console.log("query")
 
     try {
@@ -43,17 +43,23 @@ query {
         });
 
         const data = await response.json();
-        console.log("after fetching data");
         console.log(JSON.stringify(data, null, 2));
 
-        const product = data.data.products.edges[0].node;
-        console.log(product);
+        const productNode = data.data.products.edges[0]?.node;
+        if (!productNode) break;
 
-        await sql.query(
-            `INSERT INTO products (shopify_id, title, handle, description) VALUES ($1, $2, $3, $4)`,
-            [product.id, product.title, product.handle, product.description]
-        );
-        console.log("Product inserted into database");
+        const { id: shopifyId, title, handle, description } = productNode;
+
+        await prisma.productOfShopify.create({
+            data: {
+                shopifyId,
+                title,
+                handle,
+                description,
+            },
+        });
+
+        console.log(`Product inserted: ${title}`);
 
         hasNextPage = data.data.products.pageInfo.hasNextPage;
         cursor = data.data.products.pageInfo.endCursor;
@@ -62,3 +68,5 @@ query {
         break;
     }
 }
+
+await prisma.$disconnect();
