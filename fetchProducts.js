@@ -14,13 +14,27 @@ while (hasNextPage) {
 
     const query = `
   query {
-    products(first: 1, after: ${cursor ? `"${cursor}"` : null}) {
+    products(first: 250, after: ${cursor ? `"${cursor}"` : null}) {
       edges {
         node {
           id
           title
           handle
           description
+          variants(first: 100) {
+            edges {
+              node {
+                id
+                title
+                displayName
+              }
+            }
+            pageInfo{
+              hasNextPage
+              endCursor
+              startCursor
+            }
+          }
         }
       }
       pageInfo {
@@ -45,21 +59,34 @@ while (hasNextPage) {
         const data = await response.json();
         console.log(JSON.stringify(data, null, 2));
 
-        const productNode = data.data.products.edges[0]?.node;
-        if (!productNode) break;
+        const len = data.data.products.edges.length
+        for(let i =0; i < len; i++)
+        {
+            const productNode = data.data.products.edges[i]?.node;
+            if (!productNode) break;
 
-        const { id: shopifyId, title, handle, description } = productNode;
+            const {id: shopifyId, title, handle, description} = productNode;
+            const variantsArr = productNode.variants.edges;
+            console.log(variantsArr.length)
+            let variants = ""
+            for (let j = 0; j < variantsArr.length - 1; j++) {
+                const variant = variantsArr[j].node;
+                variants += JSON.stringify(variant) + ",";
+            }
+            variants += JSON.stringify(variantsArr[variantsArr.length - 1]);
+            console.log(variants);
+            await prisma.productOfShopify.create({
+                data: {
+                    shopifyId,
+                    title,
+                    handle,
+                    description,
+                    variants,
+                },
+            });
 
-        await prisma.productOfShopify.create({
-            data: {
-                shopifyId,
-                title,
-                handle,
-                description,
-            },
-        });
-
-        console.log(`Product inserted: ${title}`);
+            console.log(`Product inserted: ${title}`);
+        }
 
         hasNextPage = data.data.products.pageInfo.hasNextPage;
         cursor = data.data.products.pageInfo.endCursor;

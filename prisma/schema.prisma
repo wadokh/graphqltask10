@@ -14,9 +14,10 @@ datasource db {
 }
 
 model ProductOfShopify {
-  id          Int    @id @default(autoincrement())
-  shopifyId   String @map("shopify_id")
+  id          Int     @id @default(autoincrement())
+  shopifyId   String  @map("shopify_id")
   title       String
   handle      String?
   description String?
+  variants    String?
 }
