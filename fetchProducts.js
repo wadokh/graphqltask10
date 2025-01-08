@@ -57,7 +57,7 @@ while (hasNextPage) {
         });
 
         const data = await response.json();
-        console.log(JSON.stringify(data, null, 2));
+        //console.log(JSON.stringify(data, null, 2));
 
         const len = data.data.products.edges.length
         for(let i =0; i < len; i++)
@@ -67,14 +67,14 @@ while (hasNextPage) {
 
             const {id: shopifyId, title, handle, description} = productNode;
             const variantsArr = productNode.variants.edges;
-            console.log(variantsArr.length)
+            //console.log(variantsArr.length)
             let variants = ""
             for (let j = 0; j < variantsArr.length - 1; j++) {
                 const variant = variantsArr[j].node;
                 variants += JSON.stringify(variant) + ",";
             }
             variants += JSON.stringify(variantsArr[variantsArr.length - 1]);
-            console.log(variants);
+            //console.log(variants);
             await prisma.productOfShopify.create({
                 data: {
                     shopifyId,
